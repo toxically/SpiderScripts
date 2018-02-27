@@ -7,23 +7,25 @@ import requests
 from config import *
 from utils import *
 from lxml import etree
+from random import choice
 from dateutil.parser import parse
+from ua import USER_AGENT_LIST
 
 headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Connection': 'keep-alive',
     'Host': 'm.biquke.com',
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Mobile Safari/537.36'
+    'User-Agent': choice(USER_AGENT_LIST)
 }
 
 
 def check_update():
     for book_title, book_chapters_url in NOVELS:
+        print('[{date}]正在检查({book})更新情况...'.format(date=time.strftime('%y-%m-%d %H:%M:%S'), book=book_title))
 
         # 小说目录url转换成移动端url
         book_chapters_url = book_chapters_url.replace('www.biquke.com', 'm.biquke.com')
 
-        r = requests.get(book_chapters_url, headers=headers)
+        r = requests.get(book_chapters_url, headers=headers, timeout=20)
         r.encoding = 'utf-8'
         r.raise_for_status()
 
@@ -32,7 +34,7 @@ def check_update():
         time_delta = (datetime.datetime.now() - parse(last_modified_time).replace(
             tzinfo=None)).total_seconds() / 60 / 60
 
-        if time_delta < 1:
+        if time_delta < 2:
             dom = etree.HTML(r.text)
 
             new_chapter_title = ''.join(dom.xpath('.//ul[@class="chapter"][1]/li[1]/a/text()'))
@@ -43,12 +45,17 @@ def check_update():
 
             # 发送邮件
             email_title = '{book_title}-{book_chapter}'.format(book_title=book_title, book_chapter=new_chapter_title)
-            send_email(email_title, new_chapter_content)
+            result = send_email(email_title, new_chapter_content)
+            if result:
+                print('[{date}]{book}更新已更新章节，并发送到指定邮箱了'.format(date=time.strftime('%y-%m-%d %H:%M:%S'),
+                                                               book=book_title))
+        else:
+            print('[{date}]{book} 无更新章节...'.format(date=time.strftime('%y-%m-%d %H:%M:%S'), book=book_title))
         time.sleep(5)
 
 
 def get_book_chapter_content(url):
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=20)
     response.encoding = 'utf-8'
     response.raise_for_status()
 

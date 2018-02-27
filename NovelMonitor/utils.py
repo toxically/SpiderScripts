@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.header import Header
 from config import *
@@ -21,5 +22,7 @@ def send_email(book_title, book_content):
         smtp_obj = smtplib.SMTP(mail_config['MAIL_SMTP_HOST'], mail_config['MAIL_SMTP_PORT'])
         smtp_obj.login(mail_config['MAIL_USER'], mail_config['MAIL_PASSWORD'])
         smtp_obj.sendmail(mail_config['MAIL_USER'], mail_config['MAIL_RECEIVERS'], msg.as_string())
+        return True
     except smtplib.SMTPException as e:
-        print('小说{title}更新订阅邮件，发送失败！'.format(title=book_title))
+        print('[{date}]小说{title}更新订阅邮件，发送失败！'.format(title=book_title, date=time.strftime('%y-%m-%d %H:%M:%S')))
+        return False
